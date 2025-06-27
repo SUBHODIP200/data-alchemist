@@ -5,6 +5,7 @@ import { parseCSVFile, parseExcelFile } from '@/lib/parser';
 import { getFilterFunction } from '@/lib/filter';
 import FileUploader from '@/components/FileUploader';
 import DataGrid from '@/components/DataGrid';
+import RuleBuilder from '@/components/RuleBuilder/RuleBuilder';
 
 export default function HomePage() {
   const [clients, setClients] = useState<any[]>([]);
@@ -126,6 +127,7 @@ export default function HomePage() {
           />
         </section>
       )}
+      <RuleBuilder/>
     </main>
   );
 }
