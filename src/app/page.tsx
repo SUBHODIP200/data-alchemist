@@ -1,103 +1,131 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import { parseCSVFile, parseExcelFile } from '@/lib/parser';
+import { getFilterFunction } from '@/lib/filter';
+import FileUploader from '@/components/FileUploader';
+import DataGrid from '@/components/DataGrid';
+
+export default function HomePage() {
+  const [clients, setClients] = useState<any[]>([]);
+  const [workers, setWorkers] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+
+  const [filteredClients, setFilteredClients] = useState<any[]>([]);
+  const [filteredWorkers, setFilteredWorkers] = useState<any[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<any[]>([]);
+
+  const [clientQuery, setClientQuery] = useState('');
+  const [workerQuery, setWorkerQuery] = useState('');
+  const [taskQuery, setTaskQuery] = useState('');
+
+  const handleFileUpload = async (file: File, type: 'clients' | 'workers' | 'tasks') => {
+    const isCSV = file.name.endsWith('.csv');
+    const parsedData = isCSV
+      ? await parseCSVFile(file, type)
+      : await parseExcelFile(file, type);
+
+    if (type === 'clients') {
+      setClients(parsedData);
+      setFilteredClients([]);
+    }
+    if (type === 'workers') {
+      setWorkers(parsedData);
+      setFilteredWorkers([]);
+    }
+    if (type === 'tasks') {
+      setTasks(parsedData);
+      setFilteredTasks([]);
+    }
+  };
+
+  const runFilter = async (
+    query: string,
+    data: any[],
+    type: 'clients' | 'workers' | 'tasks'
+  ) => {
+    if (!query || data.length === 0) return;
+
+    const fn = await getFilterFunction(query, type, data[0]);
+    const result = data.filter(fn);
+
+    if (type === 'clients') setFilteredClients(result);
+    if (type === 'workers') setFilteredWorkers(result);
+    if (type === 'tasks') setFilteredTasks(result);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="p-6 space-y-8">
+      <h1 className="text-3xl font-bold">🧪 Data Alchemist</h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <FileUploader label="Upload Clients File" onUpload={(f) => handleFileUpload(f, 'clients')} />
+        <FileUploader label="Upload Workers File" onUpload={(f) => handleFileUpload(f, 'workers')} />
+        <FileUploader label="Upload Tasks File" onUpload={(f) => handleFileUpload(f, 'tasks')} />
+      </div>
+
+      {clients.length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold mb-2 mt-6">Clients</h2>
+          <input
+            type="text"
+            placeholder='e.g. "PriorityLevel > 2 and RequestedTaskIDs includes T1"'
+            className="border p-2 w-full mb-2 text-sm"
+            value={clientQuery}
+            onChange={(e) => setClientQuery(e.target.value)}
+            onKeyDown={(e) =>
+              e.key === 'Enter' && runFilter(clientQuery, clients, 'clients')
+            }
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          <DataGrid
+            data={filteredClients.length ? filteredClients : clients}
+            setData={setClients}
+            entityType="clients"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+        </section>
+      )}
+
+      {workers.length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold mb-2 mt-6">Workers</h2>
+          <input
+            type="text"
+            placeholder='e.g. "MaxLoadPerPhase < 3"'
+            className="border p-2 w-full mb-2 text-sm"
+            value={workerQuery}
+            onChange={(e) => setWorkerQuery(e.target.value)}
+            onKeyDown={(e) =>
+              e.key === 'Enter' && runFilter(workerQuery, workers, 'workers')
+            }
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <DataGrid
+            data={filteredWorkers.length ? filteredWorkers : workers}
+            setData={setWorkers}
+            entityType="workers"
+          />
+        </section>
+      )}
+
+      {tasks.length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold mb-2 mt-6">Tasks</h2>
+          <input
+            type="text"
+            placeholder='e.g. "Duration > 1 and PreferredPhases includes 2"'
+            className="border p-2 w-full mb-2 text-sm"
+            value={taskQuery}
+            onChange={(e) => setTaskQuery(e.target.value)}
+            onKeyDown={(e) =>
+              e.key === 'Enter' && runFilter(taskQuery, tasks, 'tasks')
+            }
+          />
+          <DataGrid
+            data={filteredTasks.length ? filteredTasks : tasks}
+            setData={setTasks}
+            entityType="tasks"
+          />
+        </section>
+      )}
+    </main>
   );
 }
